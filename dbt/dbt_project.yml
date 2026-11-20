@@ -1,0 +1,6 @@
+name: retail_foundation
+version: '1.0.0'
+config-version: 2
+profile: retail_foundation
+model-paths: ['models']
+clean-targets: ['target', 'dbt_packages']

@@ -1,0 +1,117 @@
+name: retail-m1-t01
+
+x-airflow: &airflow
+  image: apache/airflow:2.11.0-python3.12
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__PARALLELISM: '2'
+    AIRFLOW__CORE__MAX_ACTIVE_TASKS_PER_DAG: '2'
+    AIRFLOW__CORE__MAX_ACTIVE_RUNS_PER_DAG: '1'
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__DEFAULT_TIMEZONE: utc
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow_meta:${AIRFLOW_DB_PASSWORD:?Generate .env first}@postgres/airflow
+    AIRFLOW__CORE__FERNET_KEY: ${AIRFLOW_FERNET_KEY:?Generate .env first}
+    AIRFLOW__WEBSERVER__SECRET_KEY: ${AIRFLOW_WEBSERVER_SECRET_KEY:?Generate .env first}
+    AIRFLOW__WEBSERVER__WORKERS: '1'
+    AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    AIRFLOW__SCHEDULER__PARSING_PROCESSES: '1'
+  volumes:
+    - airflow_logs:/opt/airflow/logs
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: postgres:16.11-bookworm
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Generate .env first}
+      RETAIL_DB_PASSWORD: ${RETAIL_DB_PASSWORD:?Generate .env first}
+      AIRFLOW_DB_PASSWORD: ${AIRFLOW_DB_PASSWORD:?Generate .env first}
+    ports:
+      - '127.0.0.1:55432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sh:/docker-entrypoint-initdb.d/10-databases.sh:ro
+      - ./sql:/workspace/sql:ro
+      - ./tests:/workspace/tests:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+  airflow-init:
+    <<: *airflow
+    environment:
+      <<: *airflow-env
+      AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:?Generate .env first}
+    volumes:
+      - airflow_logs:/opt/airflow/logs
+      - ./docker/airflow/init.sh:/opt/airflow/local-init.sh:ro
+    entrypoint: ['/bin/bash', '/opt/airflow/local-init.sh']
+    restart: 'no'
+
+  airflow-scheduler:
+    <<: *airflow
+    command: scheduler
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'curl', '--fail', '--silent', 'http://localhost:8974/health']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  airflow-webserver:
+    <<: *airflow
+    environment:
+      <<: *airflow-env
+      AIRFLOW_ADMIN_USER: admin
+      AIRFLOW_ADMIN_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD:?Generate .env first}
+    command: webserver
+    ports:
+      - '127.0.0.1:8080:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      airflow-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD', 'curl', '--fail', '--silent', 'http://localhost:8080/health']
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  dbt:
+    profiles: ['tools']
+    image: retail-m1-t01-dbt:1.10.15-postgres1.9.1
+    build:
+      context: ./docker/dbt
+    environment:
+      DBT_PROFILES_DIR: /workspace/dbt
+      DBT_SEND_ANONYMOUS_USAGE_STATS: 'false'
+      DBT_LOG_PATH: /tmp/dbt-logs
+      DBT_TARGET_PATH: /tmp/dbt-target
+      RETAIL_DB_PASSWORD: ${RETAIL_DB_PASSWORD:?Generate .env first}
+    volumes:
+      - ./dbt:/workspace/dbt:ro
+    working_dir: /workspace/dbt
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ['debug']
+
+volumes:
+  postgres_data:
+  airflow_logs:
