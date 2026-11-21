@@ -2,3 +2,8 @@
 *.sh text eol=lf
 *.sql text eol=lf
 *.yml text eol=lf
+*.jsonl text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+# The final blank JSONL record is intentional raw source evidence.
+fixtures/synthetic/refunds.jsonl whitespace=-blank-at-eof

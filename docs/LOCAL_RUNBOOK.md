@@ -1,6 +1,6 @@
 # Local foundation runbook — M1-T01 v1.1
 
-Run these commands in PowerShell 7 from `D:\retail-order-to-cash\Retail-Order-to-Cash`. Use the authorized `feature/m1-t01-foundation` branch. This runbook covers the local foundation only; it does not authorize other tasks, remote Git operations or deployment.
+Run these commands in PowerShell 7 from `D:\retail-order-to-cash\Retail-Order-to-Cash`, on the branch authorized for the current task. This runbook covers the local foundation; [INGESTION_RUNBOOK.md](INGESTION_RUNBOOK.md) covers the on-demand M1-T02 runner. Documentation does not grant execution, remote Git or deployment authorization.
 
 ## Prerequisites and pinned baseline
 
@@ -96,9 +96,9 @@ Compose project `retail-m1-t01` uses named `postgres_data` and `airflow_logs` vo
 | `bronze` | `input_batches`, `orders_source`, `payments_source`, `refunds_source` |
 | `core` | `evaluation_runs`, `reconciliation_results`, `reconciliation_findings`, `dq_findings` |
 
-The separate Airflow database contains Airflow's own metadata tables, excluded from the eight Retail tables. Raw source business identities/statuses/versions stay permissive; technical occurrence keys and batch foreign keys preserve provenance. Original monetary text and full raw payload are retained as text, including malformed records. Parsed money is nullable BIGINT cents and validated timestamps are TIMESTAMPTZ, using a UTC convention. No monetary parsing, rounding, deduplication, effective-state selection or reconciliation calculation is implemented.
+The separate Airflow database contains Airflow's own metadata tables, excluded from the eight Retail tables. Raw source business identities/statuses/versions stay permissive; technical occurrence keys and batch foreign keys preserve provenance. Original monetary text and full raw payload are retained as text, including malformed records. Parsed money is nullable BIGINT cents and validated timestamps are TIMESTAMPTZ, using a UTC convention. M1-T02 adds bounded Python parsing into those existing columns; no business deduplication, effective-state selection or reconciliation calculation is implemented.
 
-Future ingestion must enforce batch content identity, state transitions, source/batch consistency, row counts, readiness, replay rules and committed-batch immutability including raw child rows. Primary keys do not establish immutability. Future evaluation writers must derive/validate stable evaluation keys, reject conflicting snapshot/as-of/rules context reuse and publish atomically. Multiple attempts may share an evaluation key now; the schema alone does not prove context consistency. These deferred requirements do not authorize extra tables or implementation in M1-T01.
+The M1-T02 workflow enforces bounded batch identity, atomic commitment, source/row lineage, explicit completeness metadata and unchanged committed-batch replay. Primary keys alone do not establish immutability; direct SQL access remains outside that workflow guarantee. Business input readiness, effective states and broader replay/backfill remain deferred. Future evaluation writers must derive/validate stable evaluation keys, reject conflicting snapshot/as-of/rules context reuse and publish atomically. Multiple attempts may share an evaluation key now; the schema alone does not prove context consistency.
 
 ## Restart and shutdown
 
@@ -122,4 +122,4 @@ Do not add `-v`, delete volumes or destructively reinitialize databases for test
 
 The authorized workspace is `D:\retail-order-to-cash`; its actual Git checkout is the nested `Retail-Order-to-Cash` directory. Owner-approved `AGENTS.md` and both project skills reside in the workspace parent and apply to this checkout. The approved status-label correction is outside this Git repository and cannot appear in its commit. The parent `README-OWNER.md` is an unchanged historical draft; task authority comes from the Owner's explicit M1-T01 v1.1 authorization and current `AGENTS.md`.
 
-Completion is subject to a separate TASK REPORT and independent Tech Lead review. No local test result authorizes push, PR, merge, deployment or the next task.
+Task summaries, test evidence and limitations are recorded in the relevant PR description under the Owner-approved delivery workflow. Independent Tech Lead review and a separate Owner merge decision are required. Test success does not authorize deployment or the next task.
