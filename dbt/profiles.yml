@@ -1,0 +1,13 @@
+retail_foundation:
+  target: local
+  outputs:
+    local:
+      type: postgres
+      host: postgres
+      port: 5432
+      user: retail
+      password: "{{ env_var('RETAIL_DB_PASSWORD') }}"
+      dbname: retail
+      schema: core
+      threads: 2
+      connect_timeout: 10
