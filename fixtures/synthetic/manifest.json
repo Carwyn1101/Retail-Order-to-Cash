@@ -1,0 +1,8 @@
+{
+  "synthetic": true,
+  "inputs": [
+    {"source": "orders", "path": "orders.jsonl", "scope_complete": true},
+    {"source": "payments", "path": "payments.jsonl", "scope_complete": true},
+    {"source": "refunds", "path": "refunds.jsonl", "scope_complete": true}
+  ]
+}

@@ -112,6 +112,30 @@ services:
         condition: service_healthy
     command: ['debug']
 
+  ingest:
+    profiles: ['tools']
+    image: retail-m1-t01-dbt:1.10.15-postgres1.9.1
+    build:
+      context: ./docker/dbt
+    entrypoint: ['python']
+    command: ['-m', 'retail_ingestion', '--manifest', 'fixtures/synthetic/manifest.json']
+    working_dir: /workspace
+    environment:
+      PYTHONPATH: /workspace/src
+      PYTHONDONTWRITEBYTECODE: '1'
+      PGHOST: postgres
+      PGPORT: '5432'
+      PGDATABASE: retail
+      PGUSER: retail
+      RETAIL_DB_PASSWORD: ${RETAIL_DB_PASSWORD:?Generate .env first}
+    volumes:
+      - ./src:/workspace/src:ro
+      - ./fixtures:/workspace/fixtures:ro
+      - ./tests:/workspace/tests:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   airflow_logs:
