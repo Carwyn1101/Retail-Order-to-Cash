@@ -136,6 +136,36 @@ services:
       postgres:
         condition: service_healthy
 
+  reconcile:
+    profiles: ['tools']
+    image: retail-m1-t01-dbt:1.10.15-postgres1.9.1
+    build:
+      context: ./docker/dbt
+    entrypoint: ['python']
+    command: ['-m', 'retail_reconciliation', '--help']
+    working_dir: /workspace
+    environment:
+      PYTHONPATH: /workspace/src
+      PYTHONDONTWRITEBYTECODE: '1'
+      DBT_PROFILES_DIR: /workspace/dbt
+      DBT_SEND_ANONYMOUS_USAGE_STATS: 'false'
+      DBT_LOG_PATH: /tmp/dbt-logs
+      DBT_TARGET_PATH: /tmp/dbt-target
+      PGHOST: postgres
+      PGPORT: '5432'
+      PGDATABASE: retail
+      PGUSER: retail
+      RETAIL_DB_PASSWORD: ${RETAIL_DB_PASSWORD:?Generate .env first}
+    volumes:
+      - ./src:/workspace/src:ro
+      - ./fixtures:/workspace/fixtures:ro
+      - ./tests:/workspace/tests:ro
+      - ./dbt:/workspace/dbt:ro
+      - ./sql:/workspace/sql:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
 volumes:
   postgres_data:
   airflow_logs:

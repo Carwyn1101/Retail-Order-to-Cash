@@ -1,0 +1,1 @@
+{"synthetic":true,"source_record_id":"syn-t03-refunds-f08","refund_id":"syn-t03-refund-f08","order_id":"syn-t03-f08","payment_id":"syn-t03-payment-f08","source_version":"0001","event_at":"2026-02-01T12:00:00Z","source_updated_at":"2026-02-01T12:05:00Z","financial_effective_at":"2026-02-01T12:00:00Z","refund_status":"COMPLETED","amount_raw":"20.00","currency":"USD"}
