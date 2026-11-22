@@ -1,7 +1,10 @@
 name: retail-m1-t01
 
 x-airflow: &airflow
-  image: apache/airflow:2.11.0-python3.12
+  image: retail-m1-t04-airflow:2.11.0-dbt1.10.15
+  build:
+    context: ./docker
+    dockerfile: airflow/Dockerfile
   environment: &airflow-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__CORE__PARALLELISM: '2'
@@ -17,8 +20,22 @@ x-airflow: &airflow
     AIRFLOW__API__AUTH_BACKENDS: airflow.api.auth.backend.basic_auth,airflow.api.auth.backend.session
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
     AIRFLOW__SCHEDULER__PARSING_PROCESSES: '1'
+    PYTHONPATH: /workspace/src
+    PYTHONDONTWRITEBYTECODE: '1'
+    PGHOST: postgres
+    PGPORT: '5432'
+    PGDATABASE: retail
+    PGUSER: retail
+    RETAIL_DB_PASSWORD: ${RETAIL_DB_PASSWORD:?Generate .env first}
+    DBT_PROFILES_DIR: /workspace/dbt
+    DBT_SEND_ANONYMOUS_USAGE_STATS: 'false'
   volumes:
     - airflow_logs:/opt/airflow/logs
+    - ./dags:/opt/airflow/dags:ro
+    - ./src:/workspace/src:ro
+    - ./fixtures:/workspace/fixtures:ro
+    - ./dbt:/workspace/dbt:ro
+    - ./tests:/workspace/tests:ro
   depends_on:
     postgres:
       condition: service_healthy
