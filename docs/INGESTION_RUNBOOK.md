@@ -2,6 +2,8 @@
 
 Use the existing [foundation runtime](LOCAL_RUNBOOK.md), PowerShell 7 and the branch authorized for this task. All identifiers and records in `fixtures/synthetic/` are synthetic. These ingestion fixtures do not define F01–F13 reconciliation outcomes or prove AC-01–AC-10.
 
+For the separate F01/F03/F08 scenario inputs in `fixtures/reconciliation/` and manual evaluation commands, see the [M1-T03 reconciliation runbook](RECONCILIATION_RUNBOOK.md). The original M1-T02 fixture files remain unchanged.
+
 ## Run and verify
 
 From `D:\retail-order-to-cash\Retail-Order-to-Cash`, retain the existing ignored `.env` and named PostgreSQL volume. The M1-T01 schema must already exist. For a fresh environment, complete the foundation runbook first.
