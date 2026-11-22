@@ -9,13 +9,14 @@ Use Docker Desktop with its Linux engine running, Docker Compose v2 or newer wit
 | Component | Pin |
 |---|---|
 | PostgreSQL image | `postgres:16.11-bookworm` |
-| Airflow image | `apache/airflow:2.11.0-python3.12` |
+| Airflow build base | `apache/airflow:2.11.0-python3.12` |
+| Local Airflow image | `retail-m1-t04-airflow:2.11.0-dbt1.10.15` |
 | dbt build base | `python:3.12.12-slim-bookworm` |
 | dbt Core | `1.10.15` |
 | dbt PostgreSQL adapter | `1.9.1` |
 | Git in dbt image | Debian `1:2.39.5-0+deb12u3` |
 
-`docker/dbt/requirements.txt` pins the 54 resolved Python packages for the dbt image. The image build also runs `pip check`. The Python base is pinned by tag and digest; the other service images use exact version tags. Python packages are version-pinned without hash locks. Git is required by `dbt debug`; the image includes the pinned Debian package. Rebuilding requires those packages to remain available from their registries.
+`docker/dbt/requirements.txt` pins the 54 resolved Python packages for the dbt image. M1-T04 also installs these unchanged pins in an isolated venv inside the derived Airflow image, without replacing Airflow's packages; see the [Airflow runbook](AIRFLOW_RUNBOOK.md). Both image builds run `pip check` for the dbt environment. The standalone Python base is pinned by tag and digest; the other service bases use exact version tags. Python packages are version-pinned without hash locks. Git is required by `dbt debug`; both builds include the same pinned Debian package. Rebuilding requires those packages to remain available from their registries.
 
 Airflow 2.11's [documented compatibility](https://airflow.apache.org/docs/apache-airflow/2.11.0/installation/prerequisites.html) includes Python 3.12 and PostgreSQL 16. Its [LocalExecutor runs task subprocesses with the scheduler](https://airflow.apache.org/docs/apache-airflow/2.11.0/administration-and-deployment/production-deployment.html), so this version-specific layout uses an init job, scheduler and webserver. It does not reuse the official Celery Compose layout. This pinned local foundation is not a production hardening or ongoing support guarantee.
 
@@ -35,7 +36,8 @@ Generate local credentials once. The script refuses to overwrite an existing `.e
 ```powershell
 pwsh -NoProfile -File .\scripts\New-LocalEnv.ps1
 docker compose config --quiet
-docker compose pull postgres airflow-init airflow-scheduler airflow-webserver
+docker compose pull postgres
+docker compose build airflow-scheduler
 docker compose --profile tools build dbt
 docker compose up -d --wait --wait-timeout 180 postgres
 ```
@@ -74,7 +76,7 @@ docker compose --profile tools run --rm dbt debug
 docker compose exec -T postgres sh -c 'export PGPASSWORD="$RETAIL_DB_PASSWORD"; exec psql -X -h 127.0.0.1 -U retail -d retail -v ON_ERROR_STOP=1 -f /workspace/tests/schema_smoke.sql'
 ```
 
-The dbt profile uses environment credentials in the [documented PostgreSQL profile format](https://docs.getdbt.com/docs/local/connect-data-platform/postgres-setup). dbt runs on demand, with temporary logs/targets inside its disposable container and anonymous usage reporting disabled. There are no business models.
+The dbt profile uses environment credentials in the [documented PostgreSQL profile format](https://docs.getdbt.com/docs/local/connect-data-platform/postgres-setup). dbt runs on demand, with temporary logs/targets inside its disposable container and anonymous usage reporting disabled. M1-T03 adds the ephemeral reconciliation business model described in the [reconciliation runbook](RECONCILIATION_RUNBOOK.md); M1-T04 orchestrates it through the manually triggered [Airflow DAG](AIRFLOW_RUNBOOK.md).
 
 ## Local access and storage
 
